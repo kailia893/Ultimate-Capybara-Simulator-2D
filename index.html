@@ -54,6 +54,7 @@ body { background: #1a1a1a; color: #e0e0e0; font-family: monospace; min-height: 
             color:#e0e0e0;border-radius:4px;padding:3px 6px;font-size:13px">
     </label>
     <div id="timer-bar"><div id="timer-fill" style="width:100%"></div></div>
+    <div id="special-status"></div>
     <div id="board"></div>
   </div>
   <div id="right">
@@ -90,6 +91,7 @@ body { background: #1a1a1a; color: #e0e0e0; font-family: monospace; min-height: 
 
 <script>
 let COLS = 10, ROWS = 10;
+let cooldown = 0;
 const DIRS = ['U','D','L','R'];
 const DIR_DELTA = { U:[-1,0], D:[1,0], L:[0,-1], R:[0,1] };
 let board, playerR, playerC, dangerCells, turn, gameOver, timerVal, timerInterval, moveQueue, savedSlots;
@@ -116,7 +118,7 @@ function moveStr(mv) { return mv.join(''); }
 
 function initGame() {
   board = Array.from({length:ROWS}, ()=>Array(COLS).fill(0));
-  playerR = Math.floor(ROWS/2); playerC = Math.floor(COLS/2);
+  playerR = Math.floor(ROWS/3); playerC = Math.floor(COLS/2);
   dangerCells = new Set();
   turn = 0; gameOver = false;
   moveQueue = [genMove(), genMove()];
@@ -127,9 +129,23 @@ function initGame() {
 
 function startTurn() {
   turn++;
+  specialCooldown--;
   addDangerCell();
   renderAll();
   startTimer();
+}
+
+function specialAttack() {
+  if (gameOver || specialCooldown > 0) return;
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      if (dr === 0 && dc === 0) continue;
+      dangerCells.delete((playerR+dr)+','+(playerC+dc));
+    }
+  }
+  specialCooldown = 5;
+  renderAll();
+  setMsg('Special attack!');
 }
 
 function addDangerCell() {
@@ -301,10 +317,14 @@ function renderAll() {
   renderSaved();
   renderScore();
   if (!gameOver) setMsg('Find food!');
+  if (specialCooldown < 0) specialCooldown = 0;
+  const sp = document.getElementById('special-status');
+  sp.textContent = specialCooldown > 0 ? `Special attack is ready in ${specialCooldown} turns` : 'Special attack is READY (E)';
+  sp.style.color = specialCooldown > 0 ? '#888' : '#1D9E75';
 }
 
 function secret9() {
-    endGame('You found the secret button and scared your capybara to death!');
+    endGame('You accidentally scared your capybara to death!');
 }
 
 function secretj() {
@@ -335,6 +355,7 @@ document.addEventListener('keydown', e => {
     else if (k === '1') { e.preventDefault(); slotAction(0); }
     else if (k === '2') { e.preventDefault(); slotAction(1); }
     else if (k === '3') { e.preventDefault(); slotAction(2); }
+    else if (k === 'e') { e.preventDefault(); specialAttack(); }
     else if (k === '9') { e.preventDefault(); secret9(); }
     else if (k === 'j') { e.preventDefault(); secretj(); }
     else if (k === 'u') { e.preventDefault(); secretu(); }

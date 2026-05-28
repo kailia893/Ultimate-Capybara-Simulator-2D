@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2D Simulator</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #1a1a1a; color: #e0e0e0; font-family: monospace; min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 24px; }
+#app { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+#left { display: flex; flex-direction: column; gap: 10px; }
+#board { display: grid; border: 1.5px solid #444; }
+.cell { width: 36px; height: 36px; background: #252525; border: 0.5px solid #333; display: flex; align-items: center; justify-content: center; position: relative; }
+.cell.danger { background: #3a1a0e; }
+.cell canvas { position: absolute; }
+#right { display: flex; flex-direction: column; gap: 10px; min-width: 220px; }
+#status-bar { font-size: 13px; color: #aaa; }
+#timer-bar { height: 6px; background: #333; border-radius: 3px; overflow: hidden; }
+#timer-fill { height: 100%; background: #1D9E75; border-radius: 3px; transition: width 0.1s linear; }
+.panel { background: #1e1e1e; border: 0.5px solid #3a3a3a; border-radius: 8px; padding: 10px; }
+.panel-label { font-size: 11px; color: #666; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+#queue { display: flex; gap: 8px; align-items: center; }
+.move-card { background: #2a2a2a; border: 1.5px solid #444; border-radius: 6px; padding: 6px 10px; font-size: 15px; font-weight: 500; min-width: 52px; text-align: center; color: #e0e0e0; }
+.move-card.active { border-color: #378ADD; background: #0c1e30; color: #85b7eb; }
+.move-card.empty { color: #555; border-style: dashed; }
+#saved { display: flex; gap: 8px; }
+.saved-slot { background: #2a2a2a; border: 1.5px solid #444; border-radius: 6px; padding: 6px 10px; font-size: 13px; font-weight: 500; min-width: 52px; text-align: center; color: #e0e0e0; cursor: pointer; position: relative; }
+.saved-slot .slot-num { position: absolute; top: 2px; left: 4px; font-size: 9px; color: #555; }
+.saved-slot.filled { border-color: #3B6D11; background: #1a2e0a; color: #97c459; }
+.saved-slot:hover.filled { border-color: #639922; }
+#controls-hint { font-size: 11px; color: #666; line-height: 1.7; }
+#controls-hint strong { color: #aaa; }
+#msg { font-size: 14px; font-weight: 500; min-height: 20px; color: #e0e0e0; }
+#score { font-size: 13px; color: #888; }
+#overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 99; }
+#overlay-box { background: #1e1e1e; border: 0.5px solid #444; border-radius: 12px; padding: 28px 32px; text-align: center; min-width: 220px; }
+#overlay-box h2 { font-size: 22px; font-weight: 500; margin-bottom: 8px; color: #e0e0e0; }
+#overlay-box p { font-size: 14px; color: #888; margin-bottom: 18px; }
+#overlay-box button { font-size: 14px; padding: 8px 22px; border: 0.5px solid #555; border-radius: 8px; background: #2a2a2a; cursor: pointer; color: #e0e0e0; }
+#overlay-box button:hover { background: #333; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="left">
+    <div style="display:flex;gap:10px;align-items:center">
+      <span id="msg">Play the Capybara Simulator</span>
+      <span id="score">Turn: 0</span>
+    </div>
+    <label style="font-size:13px;color:#888;display:block;margin-bottom:8px">
+    Board size: <input type="number" id="size-input" value="10" min="5" max="20"
+        style="width:54px;margin-left:6px;background:#2a2a2a;border:0.5px solid #555;
+            color:#e0e0e0;border-radius:4px;padding:3px 6px;font-size:13px">
+    </label>
+    <div id="timer-bar"><div id="timer-fill" style="width:100%"></div></div>
+    <div id="board"></div>
+  </div>
+  <div id="right">
+    <div class="panel">
+      <div class="panel-label">Next moves (Q=use, W=discard)</div>
+      <div id="queue"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-label">Saved slots (1/2/3 to save or use)</div>
+      <div id="saved">
+        <div class="saved-slot" id="slot0"><span class="slot-num">1</span>—</div>
+        <div class="saved-slot" id="slot1"><span class="slot-num">2</span>—</div>
+        <div class="saved-slot" id="slot2"><span class="slot-num">3</span>—</div>
+      </div>
+    </div>
+    <div class="panel" id="controls-hint">
+      <strong>Controls</strong><br>
+      Q — use next move in queue<br>
+      W — discard next move<br>
+      1 / 2 / 3 — save OR use saved slot<br>
+      <br>
+      <span style="color:#555">D-down R-Right L-left U-up<br>Passing through a dangerous cell kills</span>
+    </div>
+  </div>
+</div>
+
+<div id="overlay">
+  <div id="overlay-box">
+    <h2 id="ol-title">2D Simulator</h2>
+    <p id="ol-desc">Survive as long as possible. Each turn a new danger cell appears. Move before the timer runs out!</p>
+    <button id="ol-btn">Play game</button>
+  </div>
+</div>
+
+<script>
+let COLS = 10, ROWS = 10;
+const DIRS = ['U','D','L','R'];
+const DIR_DELTA = { U:[-1,0], D:[1,0], L:[0,-1], R:[0,1] };
+let board, playerR, playerC, dangerCells, turn, gameOver, timerVal, timerInterval, moveQueue, savedSlots;
+const QUEUE_SIZE = 2;
+const SAVE_SIZE = 3;
+const TIMER_MS = 10;
+
+function randInt(n) { return Math.floor(Math.random() * n); }
+
+function genMove() {
+  const steps = randInt(3) + 1 === 1 ? 1 : 2;
+  const dirs = [];
+  for (let i = 0; i < (steps === 1 ? randInt(2)+1 : 2); i++) dirs.push(DIRS[randInt(4)]);
+  if (dirs.length === 1) {
+    const n = randInt(2)+1;
+    const arr = [];
+    for (let i = 0; i < n; i++) arr.push(dirs[0]);
+    return arr;
+  }
+  return dirs;
+}
+
+function moveStr(mv) { return mv.join(''); }
+
+function initGame() {
+  board = Array.from({length:ROWS}, ()=>Array(COLS).fill(0));
+  playerR = Math.floor(ROWS/2); playerC = Math.floor(COLS/2);
+  dangerCells = new Set();
+  turn = 0; gameOver = false;
+  moveQueue = [genMove(), genMove()];
+  savedSlots = [null, null, null];
+  renderAll();
+  startTurn();
+}
+
+function startTurn() {
+  turn++;
+  addDangerCell();
+  renderAll();
+  startTimer();
+}
+
+function addDangerCell() {
+  let r, c, key;
+  do {
+    r = randInt(ROWS); c = randInt(COLS);
+    key = r+','+c;
+  } while ((dangerCells.has(key) || (r===playerR && c===playerC)));
+  dangerCells.add(key);
+}
+
+function startTimer() {
+  clearInterval(timerInterval);
+  timerVal = TIMER_MS;
+  const fill = document.getElementById('timer-fill');
+  fill.style.background = '#1D9E75';
+  timerInterval = setInterval(() => {
+    timerVal -= 1;
+    const pct = Math.max(0, timerVal/TIMER_MS*100);
+    fill.style.width = pct + '%';
+    if (pct < 30) fill.style.background = '#E24B4A';
+    else if (pct < 60) fill.style.background = '#EF9F27';
+    if (timerVal <= 0) {
+      clearInterval(timerInterval);
+      endGame('Time ran out!');
+    }
+  }, 100);
+}
+
+function applyMove(mv) {
+  if (gameOver) return;
+  clearInterval(timerInterval);
+  let r = playerR, c = playerC;
+  for (const d of mv) {
+    const [dr, dc] = DIR_DELTA[d];
+    r += dr; c += dc;
+    if (r < 0 || r >= ROWS || c < 0 || c >= COLS) {
+      endGame('Capybara fell of a cliff'); return;
+    }
+    if (dangerCells.has(r+','+c)) {
+      playerR = r; playerC = c;
+      renderAll();
+      endGame('Capybara got eaten'); return;
+    }
+  }
+  playerR = r; playerC = c;
+  renderAll();
+  setMsg('Moved ' + moveStr(mv));
+  startTurn();
+}
+
+function useNext() {
+  if (!moveQueue.length) return;
+  const mv = moveQueue.shift();
+  moveQueue.push(genMove());
+  applyMove(mv);
+}
+
+function discardNext() {
+  if (!moveQueue.length) return;
+  moveQueue.shift();
+  moveQueue.push(genMove());
+  renderQueue();
+  setMsg('Discarded move');
+}
+
+function slotAction(i) {
+  if (savedSlots[i]) {
+    const mv = savedSlots[i];
+    savedSlots[i] = null;
+    renderSaved();
+    applyMove(mv);
+  } else {
+    if (savedSlots.filter(Boolean).length >= SAVE_SIZE) { setMsg('Slots full!'); return; }
+    if (!moveQueue.length) return;
+    savedSlots[i] = moveQueue.shift();
+    moveQueue.push(genMove());
+    renderAll();
+    setMsg('Saved to slot '+(i+1));
+  }
+}
+
+function endGame(reason) {
+  gameOver = true;
+  clearInterval(timerInterval);
+  const box = document.getElementById('overlay-box');
+  document.getElementById('ol-title').textContent = 'Game Over, you did not win';
+  document.getElementById('ol-btn').textContent = 'Play Again';
+  document.getElementById('overlay').style.display = 'flex';
+  renderBoard();
+}
+
+function winGame(reason) {
+  gameOver = true;
+  clearInterval(timerInterval);
+  const box = document.getElementById('overlay-box');
+  document.getElementById('ol-title').textContent = 'Congratulations, you won! You got score of ' + (COLS+ROWS);
+  document.getElementById('ol-desc').textContent = reason;
+  document.getElementById('ol-btn').textContent = 'Play Again';
+  document.getElementById('overlay').style.display = 'flex';
+}
+
+function setMsg(t) { document.getElementById('msg').textContent = t; }
+
+function renderBoard() {
+  const bEl = document.getElementById('board');
+  bEl.style.gridTemplateColumns = `repeat(${COLS}, 36px)`;
+  bEl.innerHTML = '';
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      const key = r+','+c;
+      if (dangerCells.has(key)) {
+        const img = document.createElement('img');
+        if (Math.random() < 0.5) {
+            img.src = 'obstructed1.jpg';
+        } else {
+            img.src = 'obstructed2.jpg';
+        }
+        img.style.cssText = 'width:30px;height:30px;position:absolute';
+        cell.appendChild(img);
+      }
+      if (r === playerR && c === playerC) {
+        const img = document.createElement('img');
+        img.src = 'player.jpg';
+        img.style.cssText = 'width:30px;height:30px;position:absolute';
+        cell.appendChild(img);
+      }
+      bEl.appendChild(cell);
+    }
+  }
+}
+
+function renderQueue() {
+  const qEl = document.getElementById('queue');
+  qEl.innerHTML = '';
+  for (let i = 0; i < QUEUE_SIZE; i++) {
+    const mv = moveQueue[i];
+    const card = document.createElement('div');
+    card.className = 'move-card' + (i===0?' active':'');
+    card.textContent = mv ? moveStr(mv) : '—';
+    qEl.appendChild(card);
+  }
+}
+
+function renderSaved() {
+  for (let i = 0; i < SAVE_SIZE; i++) {
+    const el = document.getElementById('slot'+i);
+    if (savedSlots[i]) {
+      el.className = 'saved-slot filled';
+      el.innerHTML = `<span class="slot-num">${i+1}</span>${moveStr(savedSlots[i])}`;
+    } else {
+      el.className = 'saved-slot';
+      el.innerHTML = `<span class="slot-num">${i+1}</span>—`;
+    }
+  }
+}
+
+function renderScore() {
+  document.getElementById('score').textContent = 'Turn: ' + (turn > 0 ? turn-1 : 0);
+  if (turn > COLS + ROWS + 5) winGame('Your capybara made it to safety!');
+}
+
+function renderAll() {
+  renderBoard();
+  renderQueue();
+  renderSaved();
+  renderScore();
+  if (!gameOver) setMsg('Your move!');
+}
+
+document.addEventListener('keydown', e => {
+  if (gameOver) return;
+  const k = e.key.toLowerCase();
+  if (k === 'q') { e.preventDefault(); useNext(); }
+  else if (k === 'w') { e.preventDefault(); discardNext(); }
+  else if (k === '1') { e.preventDefault(); slotAction(0); }
+  else if (k === '2') { e.preventDefault(); slotAction(1); }
+  else if (k === '3') { e.preventDefault(); slotAction(2); }
+});
+
+document.getElementById('ol-btn').addEventListener('click', () => {
+  const sz = parseInt(document.getElementById('size-input').value) || 10;
+  COLS = Math.min(20, Math.max(5, sz));
+  ROWS = Math.min(20, Math.max(5, sz));
+  document.getElementById('overlay').style.display = 'none';
+  initGame();
+});
+</script>
+</body>
+</html>

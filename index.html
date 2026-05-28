@@ -45,7 +45,7 @@ body { background: #1a1a1a; color: #e0e0e0; font-family: monospace; min-height: 
 <div id="app">
   <div id="left">
     <div style="display:flex;gap:10px;align-items:center">
-      <span id="msg">Play the Capybara Simulator</span>
+      <span id="msg">Help your capybara return to safety</span>
       <span id="score">Turn: 0</span>
     </div>
     <label style="font-size:13px;color:#888;display:block;margin-bottom:8px">
@@ -58,11 +58,11 @@ body { background: #1a1a1a; color: #e0e0e0; font-family: monospace; min-height: 
   </div>
   <div id="right">
     <div class="panel">
-      <div class="panel-label">Next moves (Q=use, W=discard)</div>
+      <div class="panel-label">Food locations (Q=go, W=abandon)</div>
       <div id="queue"></div>
     </div>
     <div class="panel">
-      <div class="panel-label">Saved slots (1/2/3 to save or use)</div>
+      <div class="panel-label">Remembered locations (1/2/3 to save or go)</div>
       <div id="saved">
         <div class="saved-slot" id="slot0"><span class="slot-num">1</span>—</div>
         <div class="saved-slot" id="slot1"><span class="slot-num">2</span>—</div>
@@ -292,7 +292,7 @@ function renderSaved() {
 
 function renderScore() {
   document.getElementById('score').textContent = 'Turn: ' + (turn > 0 ? turn-1 : 0);
-  if (turn > COLS + ROWS + 5) winGame('Your capybara made it to safety!');
+  if (turn > Math.floor((COLS * ROWS)/2)) winGame('Your capybara made it to safety!');
 }
 
 function renderAll() {
@@ -300,17 +300,46 @@ function renderAll() {
   renderQueue();
   renderSaved();
   renderScore();
-  if (!gameOver) setMsg('Your move!');
+  if (!gameOver) setMsg('Find food!');
+}
+
+function secret9() {
+    endGame('You found the secret button and scared your capybara to death!');
+}
+
+function secretj() {
+    playerR = 0; playerC = COLS-1;
+    renderAll();
+}
+
+function secretu() {
+    playerR = 0; playerC = 0;
+    renderAll();
+}
+
+function secreti() {
+    playerR = ROWS-1; playerC = 0;
+    renderAll();
+}
+
+function secretk() {
+    playerR = ROWS-1; playerC = COLS-1;
+    renderAll();
 }
 
 document.addEventListener('keydown', e => {
-  if (gameOver) return;
-  const k = e.key.toLowerCase();
-  if (k === 'q') { e.preventDefault(); useNext(); }
-  else if (k === 'w') { e.preventDefault(); discardNext(); }
-  else if (k === '1') { e.preventDefault(); slotAction(0); }
-  else if (k === '2') { e.preventDefault(); slotAction(1); }
-  else if (k === '3') { e.preventDefault(); slotAction(2); }
+    if (gameOver) return;
+    const k = e.key.toLowerCase();
+    if (k === 'q') { e.preventDefault(); useNext(); }
+    else if (k === 'w') { e.preventDefault(); discardNext(); }
+    else if (k === '1') { e.preventDefault(); slotAction(0); }
+    else if (k === '2') { e.preventDefault(); slotAction(1); }
+    else if (k === '3') { e.preventDefault(); slotAction(2); }
+    else if (k === '9') { e.preventDefault(); secret9(); }
+    else if (k === 'j') { e.preventDefault(); secretj(); }
+    else if (k === 'u') { e.preventDefault(); secretu(); }
+    else if (k === 'i') { e.preventDefault(); secreti(); }
+    else if (k === 'k') { e.preventDefault(); secretk(); }
 });
 
 document.getElementById('ol-btn').addEventListener('click', () => {

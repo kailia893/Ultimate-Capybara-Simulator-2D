@@ -153,7 +153,8 @@ function initGame() {
 function startTurn() {
   turn++;
   if (specialCooldown > 0) specialCooldown--;
-  addDangerCell();
+  const { dangerPerTurn } = getDiffSettings();
+  for (let i = 0; i < dangerPerTurn; i++) addDangerCell();
   renderAll();
   startTimer();
 }
@@ -172,15 +173,12 @@ function specialAttack() {
 }
 
 function addDangerCell() {  
-  const {dangerperTurn} = getdiff();
-  for (let i = 0; i < dangerperTurn; i++) {
-    let r, c, key;
-    do {
-      r = randInt(ROWS); c = randInt(COLS);
-      key = r+','+c;
-    } while ((dangerCells.has(key) || (r===playerR && c===playerC)));
-    dangerCells.add(key);
-  }
+  let r, c, key;
+  do {
+    r = randInt(ROWS); c = randInt(COLS);
+    key = r+','+c;
+  } while ((dangerCells.has(key) || (r===playerR && c===playerC)));
+  dangerCells.add(key);
 }
 
 function startTimer() {

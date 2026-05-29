@@ -219,20 +219,6 @@ function encrptyscore(str) {
   ];
 }
 
-function xoshiro128ss(seed) {
-  let [a,b,c,d] = typeof seed === 'string'
-    ? cyrb128(seed) : seed;
-
-  return function next() {
-    const t = b << 9;
-    let r = (Math.imul(b, 5) | 0);
-    r = (Math.imul((r << 7) | (r >>> 25), 9) | 0);
-    c ^= a; d ^= b; b ^= c; a ^= d; c ^= t;
-    d = (d << 11) | (d >>> 21);
-    return (r >>> 0) / 4294967296;
-  };
-}
-
 function spawnBonusCell() {
   let r, c, key;
   let tries = 0;
@@ -391,7 +377,7 @@ function winGame(reason) {
   gameOver = true;
   clearInterval(timerInterval);
   const box = document.getElementById('overlay-box');
-  document.getElementById('ol-title').textContent = 'Congratulations, you won! You got score of ' + ((COLS+ROWS+visited.size+(3*BonusPoints))*getdiff().pointmultiplier*turn).toFixed(0) + ' Code: ' + encrptyscore(((COLS+ROWS+visited.size+(3*BonusPoints))*getdiff().pointmultiplier*turn) + 'Encrypt');
+  document.getElementById('ol-title').textContent = 'Congratulations, you won! You got score of ' + ((COLS+ROWS+visited.size+(3*BonusPoints))*getdiff().pointmultiplier*turn).toFixed(0) + ' Code: ' + encrptyscore(((COLS+ROWS+visited.size+(3*BonusPoints))*getdiff().pointmultiplier*turn) + 'EncryptingSalt');
   document.getElementById('ol-desc').textContent = reason;
   document.getElementById('ol-btn').textContent = 'Play Again';
   document.getElementById('overlay').style.display = 'flex';

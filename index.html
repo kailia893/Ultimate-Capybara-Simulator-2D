@@ -90,10 +90,11 @@ body { background: #c6c6c6; color: #2d2d2d; font-family: monospace; min-height: 
       The scoring is calculated using the formula:<br>
       Let board size be bs<br>
       Let unique cells visited be ucv<br>
+      Let bonus points be bp (each bonus cell absorbed gives 1 point)<br>
       Each difficult has a difficulty multiplier (dm). Easy: 0.9, Normal: 1.0, Hard: 1.5, Extreme: 1.8<br>
       Let turns survived be ts. The game stops when more than 1/4 of the board size turns have passed, 
       so this stays constant relative to board size.<br>
-      (2 * bs + ucv) * dm * ts.
+      The formula is: <strong>((2 * bs + ucv + (3 * bp)) * dm * ts).</strong>
       <br>
       <span style="color:#555">D-down R-Right L-left U-up<br>Passing through a dangerous cell kills</span>
     </div>
@@ -114,10 +115,12 @@ let cooldown = 0;
 let difficulty = 'normal';
 let lastMovePath = [];
 let visited = new Set();
+let bonusCell = null;
 const DIRS = ['U','D','L','R'];
 const DIR_DELTA = { U:[-1,0], D:[1,0], L:[0,-1], R:[0,1] };
 let board, playerR, playerC, dangerCells, turn, gameOver, timerVal, timerInterval, moveQueue, savedSlots;
-const QUEUE_SIZE = 2;
+let BonusPoints = 0;
+const QUEUE_SIZE = 3;
 const SAVE_SIZE = 3;
 let TIMER_MS = 50;
 
@@ -155,6 +158,9 @@ function initGame() {
   visited = new Set();
   visited.add(playerR+','+playerC);
   dangerCells = new Set();
+  bonusCell = null;
+  BonusPoints = 0;
+  spawnBonusCell();
   turn = 0; gameOver = false;
   moveQueue = [genMove(), genMove()];
   savedSlots = [null, null, null];
@@ -194,6 +200,22 @@ function addDangerCell() {
   dangerCells.add(key);
 }
 
+function spawnBonusCell() {
+  let r, c, key;
+  let tries = 0;
+  do {
+    r = randInt(ROWS); c = randInt(COLS);
+    key = r + ',' + c;
+    tries++;
+  } while (
+    (dangerCells.has(key) ||
+    (r === playerR && c === playerC) ||
+    (bonusCell && bonusCell.r === r && bonusCell.c === c))
+    && tries < 200
+  );
+  bonusCell = { r, c };
+}
+
 function recordMovePath(fromR, fromC, mv) {
   const path = [];
   let r = fromR, c = fromC;
@@ -203,7 +225,7 @@ function recordMovePath(fromR, fromC, mv) {
     r += dr; c += dc;
     path.push([r, c]);
   }
-  lastMovePath = path;
+  lastMovePath = path.reverse();
 }
 
 function drawMovePath() {
@@ -220,7 +242,7 @@ function drawMovePath() {
   document.getElementById('board').appendChild(cv);
 
   const ctx = cv.getContext('2d');
-  ctx.strokeStyle = '#378ADD';
+  ctx.strokeStyle = '#b3b6ba';
   ctx.lineWidth = 2.5;
   ctx.setLineDash([4, 3]);
   ctx.lineCap = 'round';
@@ -235,7 +257,7 @@ function drawMovePath() {
   lastMovePath.forEach(([r, c], i) => {
     ctx.beginPath();
     ctx.arc(c * 36 + 18, r * 36 + 18, i === 0 ? 4 : 3, 0, Math.PI * 2);
-    ctx.fillStyle = i === 0 ? '#185FA5' : '#378ADD';
+    ctx.fillStyle = i === 0 ? '#b3b6ba' : '#b3b6ba';
     ctx.fill();
   });
 }
@@ -273,6 +295,12 @@ function applyMove(mv) {
       playerR = r; playerC = c;
       renderAll();
       endGame('Capybara got eaten'); return;
+    }
+    if (bonusCell && r === bonusCell.r && c === bonusCell.c) {
+      cooldown = Math.max(0, cooldown - 1);
+      bonusCell = null;
+      BonusPoints++;
+      spawnBonusCell();
     }
   }
   playerR = r; playerC = c;
@@ -329,7 +357,7 @@ function winGame(reason) {
   gameOver = true;
   clearInterval(timerInterval);
   const box = document.getElementById('overlay-box');
-  document.getElementById('ol-title').textContent = 'Congratulations, you won! You got score of ' + ((COLS+ROWS+visited.size)*getdiff().pointmultiplier*turn).toFixed(0);
+  document.getElementById('ol-title').textContent = 'Congratulations, you won! You got score of ' + ((COLS+ROWS+visited.size+(3*BonusPoints))*getdiff().pointmultiplier*turn).toFixed(0);
   document.getElementById('ol-desc').textContent = reason;
   document.getElementById('ol-btn').textContent = 'Play Again';
   document.getElementById('overlay').style.display = 'flex';
@@ -354,6 +382,12 @@ function renderBoard() {
             img.src = 'obstructed2.jpg';
         }
         img.style.cssText = 'width:30px;height:30px;position:absolute';
+        cell.appendChild(img);
+      }
+      if (bonusCell && r === bonusCell.r && c === bonusCell.c) {
+        const img = document.createElement('img');
+        img.src = 'plus.jpg';
+        img.style.cssText = 'width:30px;height:30px;position:absolute;border-radius:4px;';
         cell.appendChild(img);
       }
       if (r === playerR && c === playerC) {

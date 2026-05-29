@@ -285,6 +285,7 @@ function applyMove(mv) {
   if (gameOver) return;
   clearInterval(timerInterval);
   let r = playerR, c = playerC;
+  let fromr = r, fromc = c;
   for (const d of mv) {
     const [dr, dc] = DIR_DELTA[d];
     r += dr; c += dc;
@@ -304,7 +305,7 @@ function applyMove(mv) {
     }
   }
   playerR = r; playerC = c;
-  recordMovePath(playerR, playerC, mv);
+  recordMovePath(fromr, fromc, mv);
   renderAll();
   setMsg('Moved ' + moveStr(mv));
   visited.add(playerR + ',' + playerC);

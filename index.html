@@ -123,27 +123,28 @@ function initGame() {
   turn = 0; gameOver = false;
   moveQueue = [genMove(), genMove()];
   savedSlots = [null, null, null];
+  cooldown = 0;
   renderAll();
   startTurn();
 }
 
 function startTurn() {
   turn++;
-  specialCooldown--;
+  if (cooldown > 0) cooldown--;
   addDangerCell();
   renderAll();
   startTimer();
 }
 
 function specialAttack() {
-  if (gameOver || specialCooldown > 0) return;
+  if (gameOver || cooldown > 0) return;
   for (let dr = -1; dr <= 1; dr++) {
     for (let dc = -1; dc <= 1; dc++) {
       if (dr === 0 && dc === 0) continue;
       dangerCells.delete((playerR+dr)+','+(playerC+dc));
     }
   }
-  specialCooldown = 5;
+  cooldown = 5;
   renderAll();
   setMsg('Special attack!');
 }
@@ -317,10 +318,10 @@ function renderAll() {
   renderSaved();
   renderScore();
   if (!gameOver) setMsg('Find food!');
-  if (specialCooldown < 0) specialCooldown = 0;
+  if (cooldown < 0) cooldown = 0;
   const sp = document.getElementById('special-status');
-  sp.textContent = specialCooldown > 0 ? `Special attack is ready in ${specialCooldown} turns` : 'Special attack is READY (E)';
-  sp.style.color = specialCooldown > 0 ? '#888' : '#1D9E75';
+  sp.textContent = cooldown > 0 ? `Special attack is ready in ${cooldown} turns` : 'Special attack is READY (E)';
+  sp.style.color = cooldown > 0 ? '#888' : '#1D9E75';
 }
 
 function secret9() {

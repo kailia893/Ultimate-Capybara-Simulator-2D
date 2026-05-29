@@ -6,11 +6,11 @@
 <title>2D Simulator</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: #1a1a1a; color: #e0e0e0; font-family: monospace; min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 24px; }
+body { background: #c6c6c6; color: #2d2d2d; font-family: monospace; min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 24px; }
 #app { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
 #left { display: flex; flex-direction: column; gap: 10px; }
 #board { display: grid; border: 1.5px solid #444; }
-.cell { width: 36px; height: 36px; background: #252525; border: 0.5px solid #333; display: flex; align-items: center; justify-content: center; position: relative; }
+.cell { width: 36px; height: 36px; background: #d6d6d6; border: 0.5px solid #333; display: flex; align-items: center; justify-content: center; position: relative; }
 .cell.danger { background: #3a1a0e; }
 .cell canvas { position: absolute; }
 #right { display: flex; flex-direction: column; gap: 10px; min-width: 220px; }
@@ -53,6 +53,15 @@ body { background: #1a1a1a; color: #e0e0e0; font-family: monospace; min-height: 
         style="width:54px;margin-left:6px;background:#2a2a2a;border:0.5px solid #555;
             color:#e0e0e0;border-radius:4px;padding:3px 6px;font-size:13px">
     </label>
+    <div style="margin-bottom:12px;font-size:13px;color:#888">
+      Difficulty:
+      <select id="diff-select" style="margin-left:6px;background:#2a2a2a;border:0.5px solid #555;color:#e0e0e0;border-radius:4px;padding:3px 8px;font-size:13px">
+        <option value="easy">Easy</option>
+        <option value="normal" selected>Normal</option>
+        <option value="hard">Hard</option>
+        <option value="extreme">Extreme</option>
+      </select>
+    </div>
     <div id="timer-bar"><div id="timer-fill" style="width:100%"></div></div>
     <div id="special-status"></div>
     <div id="board"></div>
@@ -75,6 +84,8 @@ body { background: #1a1a1a; color: #e0e0e0; font-family: monospace; min-height: 
       Q — use next move in queue<br>
       W — discard next move<br>
       1 / 2 / 3 — save OR use saved slot<br>
+      E — special attack (clears dangers around you, 5 turn cooldown)<br>
+      Z - reset board (and to change board size)
       <br>
       <span style="color:#555">D-down R-Right L-left U-up<br>Passing through a dangerous cell kills</span>
     </div>
@@ -92,12 +103,13 @@ body { background: #1a1a1a; color: #e0e0e0; font-family: monospace; min-height: 
 <script>
 let COLS = 10, ROWS = 10;
 let cooldown = 0;
+let difficulty = 'normal';
 const DIRS = ['U','D','L','R'];
 const DIR_DELTA = { U:[-1,0], D:[1,0], L:[0,-1], R:[0,1] };
 let board, playerR, playerC, dangerCells, turn, gameOver, timerVal, timerInterval, moveQueue, savedSlots;
 const QUEUE_SIZE = 2;
 const SAVE_SIZE = 3;
-const TIMER_MS = 50;
+let TIMER_MS = 50;
 
 function randInt(n) { return Math.floor(Math.random() * n); }
 
@@ -116,8 +128,18 @@ function genMove() {
 
 function moveStr(mv) { return mv.join(''); }
 
+function getdiff() {
+  return {
+    easy:    { timerMs: 60, dangerPerTurn: 1, specialCooldown: 4, pointmultiplier: 0.9 },
+    normal:  { timerMs: 50, dangerPerTurn: 1, specialCooldown: 5, pointmultiplier: 1.0 },
+    hard:    { timerMs: 43, dangerPerTurn: 2, specialCooldown: 6, pointmultiplier: 1.5 },
+    extreme: { timerMs: 38, dangerPerTurn: 3, specialCooldown: 6, pointmultiplier: 1.8 },
+  }[difficulty];
+}
+
 function initGame() {
   board = Array.from({length:ROWS}, ()=>Array(COLS).fill(0));
+  difficulty = document.getElementById('diff-select').value;
   playerR = Math.floor(ROWS/3); playerC = Math.floor(COLS/2);
   dangerCells = new Set();
   turn = 0; gameOver = false;
@@ -144,22 +166,26 @@ function specialAttack() {
       dangerCells.delete((playerR+dr)+','+(playerC+dc));
     }
   }
-  specialCooldown = 5;
+  specialCooldown = getdiff().specialCooldown;
   renderAll();
   setMsg('Special attack!');
 }
 
-function addDangerCell() {
-  let r, c, key;
-  do {
-    r = randInt(ROWS); c = randInt(COLS);
-    key = r+','+c;
-  } while ((dangerCells.has(key) || (r===playerR && c===playerC)));
-  dangerCells.add(key);
+function addDangerCell() {  
+  const {dangerperTurn} = getdiff();
+  for (let i = 0; i < dangerperTurn; i++) {
+    let r, c, key;
+    do {
+      r = randInt(ROWS); c = randInt(COLS);
+      key = r+','+c;
+    } while ((dangerCells.has(key) || (r===playerR && c===playerC)));
+    dangerCells.add(key);
+  }
 }
 
 function startTimer() {
   clearInterval(timerInterval);
+  TIMER_MS = getdiff().timerMs;
   timerVal = TIMER_MS;
   const fill = document.getElementById('timer-fill');
   fill.style.background = '#1D9E75';
@@ -244,7 +270,7 @@ function winGame(reason) {
   gameOver = true;
   clearInterval(timerInterval);
   const box = document.getElementById('overlay-box');
-  document.getElementById('ol-title').textContent = 'Congratulations, you won! You got score of ' + (COLS+ROWS);
+  document.getElementById('ol-title').textContent = 'Congratulations, you won! You got score of ' + ((COLS+ROWS)*getdiff().pointmultiplier*turn).toFixed(0);
   document.getElementById('ol-desc').textContent = reason;
   document.getElementById('ol-btn').textContent = 'Play Again';
   document.getElementById('overlay').style.display = 'flex';
@@ -362,6 +388,7 @@ document.addEventListener('keydown', e => {
     else if (k === 'u') { e.preventDefault(); secretu(); }
     else if (k === 'i') { e.preventDefault(); secreti(); }
     else if (k === 'k') { e.preventDefault(); secretk(); }
+    else if (k === 'z') { e.preventDefault(); endGame('You reset the board.'); }
 });
 
 document.getElementById('ol-btn').addEventListener('click', () => {

@@ -82,12 +82,16 @@ body { background: #c6c6c6; color: #2d2d2d; font-family: monospace; min-height: 
       </div>
     </div>
     <div class="panel" id="controls-hint">
+      <strong>Tips</strong><br>
+      Primarily use Q and W, although saving moves can be helpful if unlucky<br>
+      Choose more difficult and larger boards for higher scores, but it is easier to die!<br>
+      Zoom in and out with your browser to adjust board size and moves position<br><br>
       <strong>Controls</strong><br>
       Q — use next move in queue<br>
       W — discard next move<br>
       1 / 2 / 3 — save OR use saved slot<br>
       E — special attack (clears dangers around you, 5 turn cooldown)<br>
-      Z - reset board (and to change board size)<br>
+      Z - reset board (and to change board size and difficulty)<br>
       <strong>Scoring</strong>
       The scoring is calculated using the formula:<br>
       Let board size be bs<br>
@@ -106,7 +110,29 @@ body { background: #c6c6c6; color: #2d2d2d; font-family: monospace; min-height: 
 <div id="overlay">
   <div id="overlay-box">
     <h2 id="ol-title">2D Simulator</h2>
-    <p id="ol-desc">Survive as long as possible. Each turn a new danger cell appears. Move before the timer runs out!</p>
+    <p id="ol-desc">Survive as long as possible. Each turn a new danger cell appears. Move before the timer runs out!<br>
+      <strong>Moves</strong><br>
+      Each move in the queue consists of 1 or 2 steps in the cardinal directions.<br>
+      For example, "U" means move up once, "LL" means move left twice, and "DR" means move down once and right once.<br>
+      There also may be moves like "UD" which means move up once and down once, effectively staying in the same place but still consuming the move and triggering dangers or picking up bonuses.<br>
+      Every element in a path will be checked for dangers and bonuses, so "DR" is not the same as "RD" in certain cases.<br>
+      <strong>Controls</strong><br>
+      Q — use next move in queue<br>
+      W — discard next move<br>
+      1 / 2 / 3 — save OR use saved slot<br>
+      E — special attack (clears dangers around you, 5 turn cooldown)<br>
+      Z - reset board (and to change board size and difficulty)<br>
+      <strong>Scoring</strong>
+      The scoring is calculated using the formula:<br>
+      Let board size be bs<br>
+      Let unique cells visited be ucv<br>
+      Let bonus points be bp (each bonus cell absorbed gives 1 point)<br>
+      Each difficult has a difficulty multiplier (dm). Easy: 0.8, Medium: 1.0, Normal: 1.2, Hard: 1.4, Extreme: 1.6, Impossible: 1.8<br>
+      Let turns survived be ts. The game stops when more than 1/4 of the board size turns have passed, 
+      so this stays constant relative to board size.<br>
+      The formula is: <strong>((2 * bs + ucv + (bs * bp)) * dm * ts).</strong>
+      <br>
+    </p>
     <button id="ol-btn">Play game</button>
   </div>
 </div>
@@ -125,6 +151,7 @@ let BonusPoints = 0;
 const QUEUE_SIZE = 3;
 const SAVE_SIZE = 3;
 let TIMER_MS = 50;
+let holdm=0;
 
 function randInt(n) { return Math.floor(Math.random() * n); }
 
@@ -200,7 +227,7 @@ function addDangerCell() {
   do {
     r = randInt(ROWS); c = randInt(COLS);
     key = r+','+c;
-  } while ((dangerCells.has(key) || (r===playerR && c===playerC)));
+  } while ((dangerCells.has(key) || (r===playerR && c===playerC) || (bonusCell && bonusCell.r === r && bonusCell.c === c)));
   dangerCells.add(key);
 }
 
@@ -234,7 +261,7 @@ function spawnBonusCell() {
     (dangerCells.has(key) ||
     (r === playerR && c === playerC) ||
     (bonusCell && bonusCell.r === r && bonusCell.c === c))
-    && tries < 200
+    && tries < 2000
   );
   bonusCell = { r, c };
 }
@@ -381,7 +408,7 @@ function winGame(reason) {
   gameOver = true;
   clearInterval(timerInterval);
   const box = document.getElementById('overlay-box');
-  document.getElementById('ol-title').textContent = 'Congratulations, you won! You got score of ' + ((COLS+ROWS+visited.size+(3*BonusPoints))*getdiff().pointmultiplier*turn).toFixed(0) + ' Code: ' + encrptyscore((((COLS+ROWS+visited.size+(3*BonusPoints))*getdiff().pointmultiplier*turn)).toFixed(0) + 'EncryptingSalt');
+  document.getElementById('ol-title').textContent = 'Congratulations, you won! You got score of ' + ((COLS+ROWS+visited.size+(COLS*BonusPoints))*getdiff().pointmultiplier*turn).toFixed(0) + ' Code: ' + encrptyscore((((COLS+ROWS+visited.size+(COLS*BonusPoints))*getdiff().pointmultiplier*turn)).toFixed(0) + 'EncryptingSalt');
   document.getElementById('ol-desc').textContent = reason;
   document.getElementById('ol-btn').textContent = 'Play Again';
   document.getElementById('overlay').style.display = 'flex';
@@ -472,6 +499,10 @@ function secret9() {
     endGame('You accidentally scared your capybara to death!');
 }
 
+function secret0() {
+    endGame('You told a joke that make your capybara forget to breath and die!');
+}
+
 function secretj() {
     playerR = 0; playerC = COLS-1;
     renderAll();
@@ -502,11 +533,19 @@ document.addEventListener('keydown', e => {
     else if (k === '3') { e.preventDefault(); slotAction(2); }
     else if (k === 'e') { e.preventDefault(); specialAttack(); }
     else if (k === '9') { e.preventDefault(); secret9(); }
+    else if (k === '0') { e.preventDefault(); secret0(); }
     else if (k === 'j') { e.preventDefault(); secretj(); }
     else if (k === 'u') { e.preventDefault(); secretu(); }
     else if (k === 'i') { e.preventDefault(); secreti(); }
     else if (k === 'k') { e.preventDefault(); secretk(); }
     else if (k === 'z') { e.preventDefault(); endGame('You reset the board.'); }
+    holdm++
+    if (k !== 'm'){
+      holdm=0;
+    }
+    if (holdm>=100){
+      endGame('STOP GRINDING THINKING SPACE III AND STOP BEING A BEAR CLICKER YOU KNOW EVERYDAY STOP BEING A FURY STOP GRINDING MINECRAFT ON EIAN STOP BEING HMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm............................');
+    }
 });
 
 document.getElementById('ol-btn').addEventListener('click', () => {

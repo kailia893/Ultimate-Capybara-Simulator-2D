@@ -86,6 +86,14 @@ body { background: #c6c6c6; color: #2d2d2d; font-family: monospace; min-height: 
       1 / 2 / 3 — save OR use saved slot<br>
       E — special attack (clears dangers around you, 5 turn cooldown)<br>
       Z - reset board (and to change board size)
+      <strong>Scoring</strong>
+      The scoring is calculated using the formula:
+      Let board size be bs
+      Let unique cells visited be ucv
+      Each difficult has a difficulty multiplier (dm). Easy: 0.9, Normal: 1.0, Hard: 1.5, Extreme: 1.8
+      Let turns survived be ts. The game stops when more than 1/4 of the board size turns have passed, 
+      so this stays constant relative to board size.
+      (2 * bs + ucv) * dm * ts.
       <br>
       <span style="color:#555">D-down R-Right L-left U-up<br>Passing through a dangerous cell kills</span>
     </div>
@@ -104,6 +112,8 @@ body { background: #c6c6c6; color: #2d2d2d; font-family: monospace; min-height: 
 let COLS = 10, ROWS = 10;
 let cooldown = 0;
 let difficulty = 'normal';
+let lastMovePath = [];
+let visited = new Set();
 const DIRS = ['U','D','L','R'];
 const DIR_DELTA = { U:[-1,0], D:[1,0], L:[0,-1], R:[0,1] };
 let board, playerR, playerC, dangerCells, turn, gameOver, timerVal, timerInterval, moveQueue, savedSlots;
@@ -141,11 +151,14 @@ function initGame() {
   board = Array.from({length:ROWS}, ()=>Array(COLS).fill(0));
   difficulty = document.getElementById('diff-select').value;
   playerR = Math.floor(ROWS/3); playerC = Math.floor(COLS/2);
+  lastMovePath = [];
+  visited = new Set();
+  visited.add(playerR+','+playerC);
   dangerCells = new Set();
   turn = 0; gameOver = false;
   moveQueue = [genMove(), genMove()];
   savedSlots = [null, null, null];
-  specialCooldown = 0;
+  cooldown = 0;
   renderAll();
   startTurn();
 }
@@ -179,6 +192,52 @@ function addDangerCell() {
     key = r+','+c;
   } while ((dangerCells.has(key) || (r===playerR && c===playerC)));
   dangerCells.add(key);
+}
+
+function recordMovePath(fromR, fromC, mv) {
+  const path = [];
+  let r = fromR, c = fromC;
+  path.push([r, c]);
+  for (const d of mv) {
+    const [dr, dc] = DIR_DELTA[d];
+    r += dr; c += dc;
+    path.push([r, c]);
+  }
+  lastMovePath = path;
+}
+
+function drawMovePath() {
+  const existing = document.getElementById('path-canvas');
+  if (existing) existing.remove();
+  if (lastMovePath.length < 2) return;
+
+  const cv = document.createElement('canvas');
+  cv.id = 'path-canvas';
+  cv.width = COLS * 36;
+  cv.height = ROWS * 36;
+  cv.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;';
+  document.getElementById('board').style.position = 'relative';
+  document.getElementById('board').appendChild(cv);
+
+  const ctx = cv.getContext('2d');
+  ctx.strokeStyle = '#378ADD';
+  ctx.lineWidth = 2.5;
+  ctx.setLineDash([4, 3]);
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  lastMovePath.forEach(([r, c], i) => {
+    const x = c * 36 + 18;
+    const y = r * 36 + 18;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  ctx.setLineDash([]);
+  lastMovePath.forEach(([r, c], i) => {
+    ctx.beginPath();
+    ctx.arc(c * 36 + 18, r * 36 + 18, i === 0 ? 4 : 3, 0, Math.PI * 2);
+    ctx.fillStyle = i === 0 ? '#185FA5' : '#378ADD';
+    ctx.fill();
+  });
 }
 
 function startTimer() {
@@ -217,8 +276,10 @@ function applyMove(mv) {
     }
   }
   playerR = r; playerC = c;
+  recordMovePath(playerR, playerC, mv);
   renderAll();
   setMsg('Moved ' + moveStr(mv));
+  visited.add(playerR + ',' + playerC);
   startTurn();
 }
 
@@ -268,7 +329,7 @@ function winGame(reason) {
   gameOver = true;
   clearInterval(timerInterval);
   const box = document.getElementById('overlay-box');
-  document.getElementById('ol-title').textContent = 'Congratulations, you won! You got score of ' + ((COLS+ROWS)*getdiff().pointmultiplier*turn).toFixed(0);
+  document.getElementById('ol-title').textContent = 'Congratulations, you won! You got score of ' + ((COLS+ROWS+visited.size)*getdiff().pointmultiplier*turn).toFixed(0);
   document.getElementById('ol-desc').textContent = reason;
   document.getElementById('ol-btn').textContent = 'Play Again';
   document.getElementById('overlay').style.display = 'flex';
@@ -304,6 +365,7 @@ function renderBoard() {
       bEl.appendChild(cell);
     }
   }
+  drawMovePath();
 }
 
 function renderQueue() {

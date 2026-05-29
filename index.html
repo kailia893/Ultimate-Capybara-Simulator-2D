@@ -153,7 +153,7 @@ function initGame() {
 function startTurn() {
   turn++;
   if (specialCooldown > 0) specialCooldown--;
-  const { dangerPerTurn } = getDiffSettings();
+  const { dangerPerTurn } = getdiff();
   for (let i = 0; i < dangerPerTurn; i++) addDangerCell();
   renderAll();
   startTimer();

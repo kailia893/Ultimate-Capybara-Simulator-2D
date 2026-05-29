@@ -98,9 +98,10 @@ body { background: #c6c6c6; color: #2d2d2d; font-family: monospace; min-height: 
       Let unique cells visited be ucv<br>
       Let bonus points be bp (each bonus cell absorbed gives 1 point)<br>
       Each difficult has a difficulty multiplier (dm). Easy: 0.8, Medium: 1.0, Normal: 1.2, Hard: 1.4, Extreme: 1.6, Impossible: 1.8<br>
+      Let bonus time be the total time saved by picking up bonuses be bt<br>
       Let turns survived be ts. The game stops when more than 1/4 of the board size turns have passed, 
       so this stays constant relative to board size.<br>
-      The formula is: <strong>((2 * bs + ucv + (3 * bp)) * dm * ts).</strong>
+      The formula is: <strong>((2 * bs + ucv + (bs * bp) + bt) * dm * ts).</strong>
       <br> <br>
       <span style="color:#555">D-down R-Right L-left U-up<br>Passing through a dangerous cell kills</span>
     </div>
@@ -128,9 +129,10 @@ body { background: #c6c6c6; color: #2d2d2d; font-family: monospace; min-height: 
       Let unique cells visited be ucv<br>
       Let bonus points be bp (each bonus cell absorbed gives 1 point)<br>
       Each difficult has a difficulty multiplier (dm). Easy: 0.8, Medium: 1.0, Normal: 1.2, Hard: 1.4, Extreme: 1.6, Impossible: 1.8<br>
+      Let bonus time be the total time saved by picking up bonuses be bt<br>
       Let turns survived be ts. The game stops when more than 1/4 of the board size turns have passed, 
       so this stays constant relative to board size.<br>
-      The formula is: <strong>((2 * bs + ucv + (bs * bp)) * dm * ts).</strong>
+      The formula is: <strong>((2 * bs + ucv + (bs * bp) + bt) * dm * ts).</strong>
       <br>
     </p>
     <button id="ol-btn">Play game</button>
@@ -152,6 +154,7 @@ const QUEUE_SIZE = 3;
 const SAVE_SIZE = 3;
 let TIMER_MS = 50;
 let holdm=0;
+let bonustime = 0;
 
 function randInt(n) { return Math.floor(Math.random() * n); }
 
@@ -191,6 +194,7 @@ function initGame() {
   dangerCells = new Set();
   bonusCell = null;
   BonusPoints = 0;
+  bonustime = 0;
   spawnBonusCell();
   turn = 0; gameOver = false;
   moveQueue = [genMove(), genMove()];
@@ -333,6 +337,7 @@ function startTimer() {
 
 function applyMove(mv) {
   if (gameOver) return;
+  bonustime+= timerVal/(15);
   clearInterval(timerInterval);
   let r = playerR, c = playerC;
   let fromr = r, fromc = c;
@@ -408,7 +413,7 @@ function winGame(reason) {
   gameOver = true;
   clearInterval(timerInterval);
   const box = document.getElementById('overlay-box');
-  document.getElementById('ol-title').textContent = 'Congratulations, you won! You got score of ' + ((COLS+ROWS+visited.size+(COLS*BonusPoints))*getdiff().pointmultiplier*turn).toFixed(0) + ' Code: ' + encrptyscore((((COLS+ROWS+visited.size+(COLS*BonusPoints))*getdiff().pointmultiplier*turn)).toFixed(0) + 'EncryptingSalt');
+  document.getElementById('ol-title').textContent = 'Congratulations, you won! You got score of ' + ((COLS+ROWS+visited.size+(COLS*BonusPoints) + bonustime)*getdiff().pointmultiplier*turn).toFixed(0) + ' Code: ' + encrptyscore((((COLS+ROWS+visited.size+(COLS*BonusPoints) + bonustime)*getdiff().pointmultiplier*turn)).toFixed(0) + 'EncryptingSalt');
   document.getElementById('ol-desc').textContent = reason;
   document.getElementById('ol-btn').textContent = 'Play Again';
   document.getElementById('overlay').style.display = 'flex';

@@ -57,9 +57,11 @@ body { background: #c6c6c6; color: #2d2d2d; font-family: monospace; min-height: 
       Difficulty:
       <select id="diff-select" style="margin-left:6px;background:#2a2a2a;border:0.5px solid #555;color:#e0e0e0;border-radius:4px;padding:3px 8px;font-size:13px">
         <option value="easy">Easy</option>
+        <option value="medium">Medium </option>
         <option value="normal" selected>Normal</option>
         <option value="hard">Hard</option>
         <option value="extreme">Extreme</option>
+        <option value="impossible">Impossible</option>
       </select>
     </div>
     <div id="timer-bar"><div id="timer-fill" style="width:100%"></div></div>
@@ -91,11 +93,11 @@ body { background: #c6c6c6; color: #2d2d2d; font-family: monospace; min-height: 
       Let board size be bs<br>
       Let unique cells visited be ucv<br>
       Let bonus points be bp (each bonus cell absorbed gives 1 point)<br>
-      Each difficult has a difficulty multiplier (dm). Easy: 0.9, Normal: 1.0, Hard: 1.5, Extreme: 1.8<br>
+      Each difficult has a difficulty multiplier (dm). Easy: 0.8, Medium: 1.0, Normal: 1.2, Hard: 1.4, Extreme: 1.6, Impossible: 1.8<br>
       Let turns survived be ts. The game stops when more than 1/4 of the board size turns have passed, 
       so this stays constant relative to board size.<br>
       The formula is: <strong>((2 * bs + ucv + (3 * bp)) * dm * ts).</strong>
-      <br>
+      <br> <br>
       <span style="color:#555">D-down R-Right L-left U-up<br>Passing through a dangerous cell kills</span>
     </div>
   </div>
@@ -143,10 +145,12 @@ function moveStr(mv) { return mv.join(''); }
 
 function getdiff() {
   return {
-    easy:    { timerMs: 60, dangerPerTurn: 1, cooldown: 4, pointmultiplier: 0.9 },
-    normal:  { timerMs: 50, dangerPerTurn: 1, cooldown: 5, pointmultiplier: 1.0 },
-    hard:    { timerMs: 43, dangerPerTurn: 2, cooldown: 6, pointmultiplier: 1.5 },
-    extreme: { timerMs: 38, dangerPerTurn: 3, cooldown: 6, pointmultiplier: 1.8 },
+    easy:    { timerMs: 60, dangerPerTurn: 1, cooldown: 4, pointmultiplier: 0.8 },
+    medium:  { timerMs: 50, dangerPerTurn: 1, cooldown: 5, pointmultiplier: 1.0 },
+    normal:  { timerMs: 43, dangerPerTurn: 2, cooldown: 5, pointmultiplier: 1.2 },
+    hard:    { timerMs: 38, dangerPerTurn: 2, cooldown: 7, pointmultiplier: 1.4 },
+    extreme: { timerMs: 34, dangerPerTurn: 3, cooldown: 7, pointmultiplier: 1.6 },
+    impossible: { timerMs: 30, dangerPerTurn: 4, cooldown: 8, pointmultiplier: 1.8 }
   }[difficulty];
 }
 
@@ -377,7 +381,7 @@ function winGame(reason) {
   gameOver = true;
   clearInterval(timerInterval);
   const box = document.getElementById('overlay-box');
-  document.getElementById('ol-title').textContent = 'Congratulations, you won! You got score of ' + ((COLS+ROWS+visited.size+(3*BonusPoints))*getdiff().pointmultiplier*turn).toFixed(0) + ' Code: ' + encrptyscore((((COLS+ROWS+visited.size+(3*BonusPoints))*getdiff().pointmultiplier*turn).toFixed(0)) + 'EncryptingSalt');
+  document.getElementById('ol-title').textContent = 'Congratulations, you won! You got score of ' + ((COLS+ROWS+visited.size+(3*BonusPoints))*getdiff().pointmultiplier*turn).toFixed(0) + ' Code: ' + encrptyscore((((COLS+ROWS+visited.size+(3*BonusPoints))*getdiff().pointmultiplier*turn)).toFixed(0) + 'EncryptingSalt');
   document.getElementById('ol-desc').textContent = reason;
   document.getElementById('ol-btn').textContent = 'Play Again';
   document.getElementById('overlay').style.display = 'flex';

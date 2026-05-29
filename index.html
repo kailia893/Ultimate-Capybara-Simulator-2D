@@ -123,28 +123,28 @@ function initGame() {
   turn = 0; gameOver = false;
   moveQueue = [genMove(), genMove()];
   savedSlots = [null, null, null];
-  cooldown = 0;
+  specialCooldown = 0;
   renderAll();
   startTurn();
 }
 
 function startTurn() {
   turn++;
-  if (cooldown > 0) cooldown--;
+  if (specialCooldown > 0) specialCooldown--;
   addDangerCell();
   renderAll();
   startTimer();
 }
 
 function specialAttack() {
-  if (gameOver || cooldown > 0) return;
+  if (gameOver || specialCooldown > 0) return;
   for (let dr = -1; dr <= 1; dr++) {
     for (let dc = -1; dc <= 1; dc++) {
       if (dr === 0 && dc === 0) continue;
       dangerCells.delete((playerR+dr)+','+(playerC+dc));
     }
   }
-  cooldown = 5;
+  specialCooldown = 5;
   renderAll();
   setMsg('Special attack!');
 }
@@ -309,7 +309,7 @@ function renderSaved() {
 
 function renderScore() {
   document.getElementById('score').textContent = 'Turn: ' + (turn > 0 ? turn-1 : 0);
-  if (turn > Math.floor((COLS * ROWS)/2)) winGame('Your capybara made it to safety!');
+  if (turn > Math.floor((COLS * ROWS)/4)) winGame('Your capybara made it to safety!');
 }
 
 function renderAll() {
@@ -318,10 +318,10 @@ function renderAll() {
   renderSaved();
   renderScore();
   if (!gameOver) setMsg('Find food!');
-  if (cooldown < 0) cooldown = 0;
+  if (specialCooldown < 0) specialCooldown = 0;
   const sp = document.getElementById('special-status');
-  sp.textContent = cooldown > 0 ? `Special attack is ready in ${cooldown} turns` : 'Special attack is READY (E)';
-  sp.style.color = cooldown > 0 ? '#888' : '#1D9E75';
+  sp.textContent = specialCooldown > 0 ? `Special attack is ready in ${specialCooldown} turns` : 'Special attack is READY (E)';
+  sp.style.color = specialCooldown > 0 ? '#888' : '#1D9E75';
 }
 
 function secret9() {

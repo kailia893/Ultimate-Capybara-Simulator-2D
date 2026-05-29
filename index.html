@@ -225,7 +225,7 @@ function recordMovePath(fromR, fromC, mv) {
     r += dr; c += dc;
     path.push([r, c]);
   }
-  lastMovePath = path.reverse();
+  lastMovePath = path;
 }
 
 function drawMovePath() {

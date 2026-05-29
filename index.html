@@ -307,7 +307,7 @@ function startTimer() {
     fill.style.width = pct + '%';
     if (pct < 30) fill.style.background = '#E24B4A';
     else if (pct < 60) fill.style.background = '#EF9F27';
-    if (timerVal <= 0) {
+    if (timerVal <= 0 && !gameOver) {
       clearInterval(timerInterval);
       endGame('Your capybara didn\'t move and starved!');
     }

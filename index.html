@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>2D Simulator</title>
+<title>2D Capybara Simulator</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: #c6c6c6; color: #2d2d2d; font-family: monospace; min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 24px; }
@@ -85,14 +85,14 @@ body { background: #c6c6c6; color: #2d2d2d; font-family: monospace; min-height: 
       W — discard next move<br>
       1 / 2 / 3 — save OR use saved slot<br>
       E — special attack (clears dangers around you, 5 turn cooldown)<br>
-      Z - reset board (and to change board size)
+      Z - reset board (and to change board size)<br>
       <strong>Scoring</strong>
-      The scoring is calculated using the formula:
-      Let board size be bs
-      Let unique cells visited be ucv
-      Each difficult has a difficulty multiplier (dm). Easy: 0.9, Normal: 1.0, Hard: 1.5, Extreme: 1.8
+      The scoring is calculated using the formula:<br>
+      Let board size be bs<br>
+      Let unique cells visited be ucv<br>
+      Each difficult has a difficulty multiplier (dm). Easy: 0.9, Normal: 1.0, Hard: 1.5, Extreme: 1.8<br>
       Let turns survived be ts. The game stops when more than 1/4 of the board size turns have passed, 
-      so this stays constant relative to board size.
+      so this stays constant relative to board size.<br>
       (2 * bs + ucv) * dm * ts.
       <br>
       <span style="color:#555">D-down R-Right L-left U-up<br>Passing through a dangerous cell kills</span>
@@ -140,10 +140,10 @@ function moveStr(mv) { return mv.join(''); }
 
 function getdiff() {
   return {
-    easy:    { timerMs: 60, dangerPerTurn: 1, specialCooldown: 4, pointmultiplier: 0.9 },
-    normal:  { timerMs: 50, dangerPerTurn: 1, specialCooldown: 5, pointmultiplier: 1.0 },
-    hard:    { timerMs: 43, dangerPerTurn: 2, specialCooldown: 6, pointmultiplier: 1.5 },
-    extreme: { timerMs: 38, dangerPerTurn: 3, specialCooldown: 6, pointmultiplier: 1.8 },
+    easy:    { timerMs: 60, dangerPerTurn: 1, cooldown: 4, pointmultiplier: 0.9 },
+    normal:  { timerMs: 50, dangerPerTurn: 1, cooldown: 5, pointmultiplier: 1.0 },
+    hard:    { timerMs: 43, dangerPerTurn: 2, cooldown: 6, pointmultiplier: 1.5 },
+    extreme: { timerMs: 38, dangerPerTurn: 3, cooldown: 6, pointmultiplier: 1.8 },
   }[difficulty];
 }
 
@@ -165,7 +165,7 @@ function initGame() {
 
 function startTurn() {
   turn++;
-  if (specialCooldown > 0) specialCooldown--;
+  if (cooldown > 0) cooldown--;
   const { dangerPerTurn } = getdiff();
   for (let i = 0; i < dangerPerTurn; i++) addDangerCell();
   renderAll();
@@ -173,14 +173,14 @@ function startTurn() {
 }
 
 function specialAttack() {
-  if (gameOver || specialCooldown > 0) return;
+  if (gameOver || cooldown > 0) return;
   for (let dr = -1; dr <= 1; dr++) {
     for (let dc = -1; dc <= 1; dc++) {
       if (dr === 0 && dc === 0) continue;
       dangerCells.delete((playerR+dr)+','+(playerC+dc));
     }
   }
-  specialCooldown = getdiff().specialCooldown;
+  cooldown = getdiff().cooldown;
   renderAll();
   setMsg('Special attack!');
 }
@@ -404,10 +404,10 @@ function renderAll() {
   renderSaved();
   renderScore();
   if (!gameOver) setMsg('Find food!');
-  if (specialCooldown < 0) specialCooldown = 0;
+  if (cooldown < 0) cooldown = 0;
   const sp = document.getElementById('special-status');
-  sp.textContent = specialCooldown > 0 ? `Special attack is ready in ${specialCooldown} turns` : 'Special attack is READY (E)';
-  sp.style.color = specialCooldown > 0 ? '#888' : '#1D9E75';
+  sp.textContent = cooldown > 0 ? `Special attack is ready in ${cooldown} turns` : 'Special attack is READY (E)';
+  sp.style.color = cooldown > 0 ? '#888' : '#1D9E75';
 }
 
 function secret9() {

@@ -90,7 +90,7 @@ body { background: #c6c6c6; color: #2d2d2d; font-family: monospace; min-height: 
       Q — use next move in queue<br>
       W — discard next move<br>
       1 / 2 / 3 — save OR use saved slot<br>
-      E — special attack (clears dangers around you, 5 turn cooldown)<br>
+      E — special attack (clears dangers around you)<br>
       Z - reset board (and to change board size and difficulty)<br>
       <strong>Scoring</strong>
       The scoring is calculated using the formula:<br>
@@ -121,7 +121,7 @@ body { background: #c6c6c6; color: #2d2d2d; font-family: monospace; min-height: 
       Q — use next move in queue<br>
       W — discard next move<br>
       1 / 2 / 3 — save OR use saved slot<br>
-      E — special attack (clears dangers around you, 5 turn cooldown)<br>
+      E — special attack (clears dangers around you)<br>
       Z - reset board (and to change board size and difficulty)<br>
       <strong>Scoring</strong>
       The scoring is calculated using the formula:<br>
@@ -413,7 +413,10 @@ function winGame(reason) {
   gameOver = true;
   clearInterval(timerInterval);
   const box = document.getElementById('overlay-box');
-  document.getElementById('ol-title').textContent = 'Congratulations, you won! You got score of ' + ((COLS+ROWS+visited.size+(COLS*BonusPoints) + bonustime)*getdiff().pointmultiplier*turn).toFixed(0) + ' Code: ' + encrptyscore((((COLS+ROWS+visited.size+(COLS*BonusPoints) + bonustime)*getdiff().pointmultiplier*turn)).toFixed(0) + 'EncryptingSalt');
+  document.getElementById('ol-title').textContent = 'Congratulations, you won! You got score of ' +
+  ((COLS+ROWS+visited.size+(COLS*BonusPoints) + bonustime)*getdiff().pointmultiplier*turn).toFixed(0) +
+  '\nCode: ' + encrptyscore((((COLS+ROWS+visited.size+(COLS*BonusPoints) + bonustime)*getdiff().pointmultiplier*turn)).toFixed(0) + 'EncryptingSalt')+
+  '\nDetails:' + '\nBoard size: ' + COLS + 'x' + ROWS + '\nUnique cells visited: ' + visited.size + '\nBonus points: ' + BonusPoints + '\nBonus time: ' + bonustime.toFixed(1) + '\nDifficulty multiplier: ' + getdiff().pointmultiplier + '\nTurns survived: ' + turn;
   document.getElementById('ol-desc').textContent = reason;
   document.getElementById('ol-btn').textContent = 'Play Again';
   document.getElementById('overlay').style.display = 'flex';

@@ -337,7 +337,7 @@ function startTimer() {
 
 function applyMove(mv) {
   if (gameOver) return;
-  bonustime+= timerVal/();
+  bonustime+= timerVal/(50);
   clearInterval(timerInterval);
   let r = playerR, c = playerC;
   let fromr = r, fromc = c;
